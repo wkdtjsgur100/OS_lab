@@ -56,10 +56,8 @@ static void print_result(lab2_tree *tree,int num_threads,int node_count ,int is_
     printf("    execution time      : %lf seconds \n\n",time);
 
     printf("\n BST inorder iteration result : \n");
-    if(tree->root == NULL)
-        printf("root is NULL");
     result_count=lab2_node_print_inorder(tree);
-    printf("    total node count    : %d \n\n",node_count);
+    printf("    total node count    : %d \n\n",result_count);
 
 
 }
@@ -139,8 +137,6 @@ void bst_test(int num_threads,int node_count){
      */
     is_sync = LAB2_TYPE_COARSEGRAINED;
     tree = lab2_tree_create();
-    if(tree->root == NULL)
-        printf("Tree root is NULL");
 
     gettimeofday(&tv_insert_start, NULL);
     for(i=0; i < num_threads ; i++){

@@ -19,14 +19,12 @@
 
 #include "lab2_sync_types.h"
 
-void print_inorder_recur(lab2_node* node)
+int print_inorder_recur(lab2_node* node)
 {
     if(node == NULL)
-        return;
+        return 0;
 
-    print_inorder_recur(node->left);
-    printf("%d ", node->key);
-    print_inorder_recur(node->right);
+    return print_inorder_recur(node->left) + print_inorder_recur(node->right)+1;
 }
 /*
  * TODO
@@ -37,9 +35,7 @@ void print_inorder_recur(lab2_node* node)
  */
 int lab2_node_print_inorder(lab2_tree *tree) {
     // You need to implement lab2_node_print_inorder function.
-    print_inorder_recur(tree->root);
-
-    return LAB2_SUCCESS;
+    return print_inorder_recur(tree->root);
 }
 
 /*
@@ -53,6 +49,8 @@ lab2_tree *lab2_tree_create() {
     // You need to implement lab2_tree_create function.
     lab2_tree* tree = (lab2_tree*)malloc(sizeof(lab2_tree));
     tree->root = NULL;
+    pthread_mutex_init(&tree->global_lock, NULL);
+
     return tree;
 }
 
@@ -89,15 +87,12 @@ lab2_node* insert_recur(lab2_node* root, lab2_node* new_node)
         root->left = insert_recur(root->left, new_node);
     else if(root->key < new_node->key)
         root->right = insert_recur(root->right, new_node);
-     
      // if key is duplicated, just return root
-     return root;
+    return root;
 }
 int lab2_node_insert(lab2_tree *tree, lab2_node *new_node){
     // You need to implement lab2_node_insert function.
     tree->root = insert_recur(tree->root, new_node);
-    printf("root key : %d ", tree->root->key);
-
     return LAB2_SUCCESS;
 }  
 
@@ -110,7 +105,7 @@ int lab2_node_insert(lab2_tree *tree, lab2_node *new_node){
  *  @return                     : status (success or fail)
  */
 int lab2_node_insert_fg(lab2_tree *tree, lab2_node *new_node){
-      // You need to implement lab2_node_insert_fg function.
+    // You need to implement lab2_node_insert_fg function.
 }
 
 /* 
@@ -122,7 +117,12 @@ int lab2_node_insert_fg(lab2_tree *tree, lab2_node *new_node){
  *  @return                     : status (success or fail)
  */
 int lab2_node_insert_cg(lab2_tree *tree, lab2_node *new_node){
-    // You need to implement lab2_node_insert_cg function.
+    // You need to implement lab2_node_insert_cg function.       
+    pthread_mutex_lock(&tree->global_lock);
+    tree->root = insert_recur(tree->root, new_node);
+    pthread_mutex_unlock(&tree->global_lock);
+
+    return LAB2_SUCCESS;
 }
 
 /* 

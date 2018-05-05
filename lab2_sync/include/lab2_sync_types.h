@@ -42,6 +42,7 @@ typedef struct lab2_node {
  */
 typedef struct lab2_tree {
     struct lab2_node *root;
+    pthread_mutex_t global_lock; // for coarse-grained lock
 } lab2_tree;
 
 /* 
@@ -63,6 +64,8 @@ typedef struct thread_arg{
  * TODO
  *  You need to implement these functions. 
  */
+
+
 int lab2_node_print_inorder(lab2_tree *tree);
 lab2_tree *lab2_tree_create();
 lab2_node *lab2_node_create(int key);
