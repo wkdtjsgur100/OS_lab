@@ -19,6 +19,15 @@
 
 #include "lab2_sync_types.h"
 
+void print_inorder_recur(lab2_node* node)
+{
+    if(node == NULL)
+        return;
+
+    print_inorder_recur(node->left);
+    printf("%d ", node->key);
+    print_inorder_recur(node->right);
+}
 /*
  * TODO
  *  Implement funtction which traverse BST in in-order
@@ -28,6 +37,9 @@
  */
 int lab2_node_print_inorder(lab2_tree *tree) {
     // You need to implement lab2_node_print_inorder function.
+    print_inorder_recur(tree->root);
+
+    return LAB2_SUCCESS;
 }
 
 /*
@@ -39,6 +51,9 @@ int lab2_node_print_inorder(lab2_tree *tree) {
  */
 lab2_tree *lab2_tree_create() {
     // You need to implement lab2_tree_create function.
+    lab2_tree* tree = (lab2_tree*)malloc(sizeof(lab2_tree));
+    tree->root = NULL;
+    return tree;
 }
 
 /*
@@ -51,6 +66,10 @@ lab2_tree *lab2_tree_create() {
  */
 lab2_node * lab2_node_create(int key) {
     // You need to implement lab2_node_create function.
+    lab2_node* node = (lab2_node*)malloc(sizeof(lab2_node));
+    node->key = key;
+    node->left = node->right = NULL;
+    return node;
 }
 
 /* 
@@ -61,10 +80,26 @@ lab2_node * lab2_node_create(int key) {
  *  @param lab2_node *new_node  : bst node which you need to insert. 
  *  @return                 : satus (success or fail)
  */
+lab2_node* insert_recur(lab2_node* root, lab2_node* new_node)
+{
+    if(root == NULL)
+        return new_node;
+    
+    if(root->key > new_node->key) 
+        root->left = insert_recur(root->left, new_node);
+    else if(root->key < new_node->key)
+        root->right = insert_recur(root->right, new_node);
+     
+     // if key is duplicated, just return root
+     return root;
+}
 int lab2_node_insert(lab2_tree *tree, lab2_node *new_node){
     // You need to implement lab2_node_insert function.
+    tree->root = insert_recur(tree->root, new_node);
+    printf("root key : %d ", tree->root->key);
 
-}
+    return LAB2_SUCCESS;
+}  
 
 /* 
  * TODO
