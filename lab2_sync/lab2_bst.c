@@ -67,6 +67,7 @@ lab2_node * lab2_node_create(int key) {
     lab2_node* node = (lab2_node*)malloc(sizeof(lab2_node));
     node->key = key;
     node->left = node->right = NULL;
+    pthread_mutex_init(&node->mutex, NULL);
     return node;
 }
 
@@ -104,8 +105,39 @@ int lab2_node_insert(lab2_tree *tree, lab2_node *new_node){
  *  @param lab2_node *new_node  : bst node which you need to insert. 
  *  @return                     : status (success or fail)
  */
+lab2_node* insert_fg_recur(lab2_node* root, lab2_node* new_node)
+{
+    if(root == NULL)
+	{
+		printf("%d ", new_node->key);
+        return new_node;
+	}
+
+    if(root->key > new_node->key){
+		printf("left here\n");
+		pthread_mutex_unlock(&root->mutex);
+		if(root->left != NULL) pthread_mutex_lock(&root->left->mutex);
+        root->left = insert_recur(root->left, new_node);
+	}
+    else if(root->key < new_node->key){
+		printf("right here\n");
+		pthread_mutex_unlock(&root->mutex);
+		if(root->right != NULL) pthread_mutex_lock(&root->right->mutex);
+        root->right = insert_recur(root->right, new_node);
+	}
+	else
+		pthread_mutex_unlock(&root->mutex);
+    
+     // if key is duplicated, just return root
+    return root;
+}
 int lab2_node_insert_fg(lab2_tree *tree, lab2_node *new_node){
     // You need to implement lab2_node_insert_fg function.
+	if(tree->root != NULL)
+		pthread_mutex_lock(&tree->root->mutex);
+	
+    tree->root = insert_fg_recur(tree->root, new_node);
+    return LAB2_SUCCESS;
 }
 
 /* 
@@ -133,8 +165,45 @@ int lab2_node_insert_cg(lab2_tree *tree, lab2_node *new_node){
  *  @param int key          : key value that you want to delete. 
  *  @return                 : status (success or fail)
  */
+
+lab2_node* find_min_node(lab2_node* root)
+{
+    lab2_node* t = root;
+    while(t->left != NULL) 
+        t = t->left;
+    return t;
+}
+lab2_node* remove_recur(lab2_node* root, int key)
+{
+    lab2_node* t_node;
+    if(root == NULL)
+        return NULL;
+
+    if(root->key == key)
+    {
+        if(root->left != NULL && root->right != NULL) // If both is not NULL
+        {
+             t_node = find_min_node(root->right);
+             root->right = remove_recur(root->right, t_node->key);
+        }
+        else
+        {
+             t_node = (root->left == NULL) ? root->right : root->left; // Decide returned node.
+             free(root);
+             return t_node;
+        }
+    }
+    else if(root->key > key)
+        root->left = remove_recur(root->left, key);
+    else 
+        root->right = remove_recur(root->right, key);
+
+    return root;
+}
 int lab2_node_remove(lab2_tree *tree, int key) {
     // You need to implement lab2_node_remove function.
+    tree->root = remove_recur(tree->root, key);
+    return LAB2_SUCCESS;
 }
 
 /* 
@@ -160,6 +229,9 @@ int lab2_node_remove_fg(lab2_tree *tree, int key) {
  */
 int lab2_node_remove_cg(lab2_tree *tree, int key) {
     // You need to implement lab2_node_remove_cg function.
+    pthread_mutex_lock(&tree->global_lock);
+    tree->root = remove_recur(tree->root, key);
+    pthread_mutex_unlock(&tree->global_lock);
 }
 
 
@@ -173,6 +245,8 @@ int lab2_node_remove_cg(lab2_tree *tree, int key) {
  */
 void lab2_tree_delete(lab2_tree *tree) {
     // You need to implement lab2_tree_delete function.
+    free(tree);
+    tree = NULL;
 }
 
 /*
@@ -185,5 +259,7 @@ void lab2_tree_delete(lab2_tree *tree) {
  */
 void lab2_node_delete(lab2_node *node) {
     // You need to implement lab2_node_delete function.
+    free(node);
+    node = NULL;
 }
 

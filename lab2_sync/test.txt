@@ -1,0 +1,17 @@
+
+insert(currentnode, new node) {
+	if ( next nod e) {
+		lock (nextnode);
+		unlock (currentnode);
+		insert(nextnode, newnode);
+	}
+
+	if (마지막노드){
+		// new node insert 
+		unlock(currentnode);
+	}
+}
+main () {
+	lock (root);
+	insert(root, newnode);
+}
