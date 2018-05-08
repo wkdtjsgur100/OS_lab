@@ -105,38 +105,69 @@ int lab2_node_insert(lab2_tree *tree, lab2_node *new_node){
  *  @param lab2_node *new_node  : bst node which you need to insert. 
  *  @return                     : status (success or fail)
  */
-lab2_node* insert_fg_recur(lab2_node* root, lab2_node* new_node)
+void insert_fg_recur(lab2_node* root, lab2_node* new_node)
 {
     if(root == NULL)
-	{
-		printf("%d ", new_node->key);
-        return new_node;
-	}
+		return;
 
-    if(root->key > new_node->key){
-		printf("left here\n");
-		pthread_mutex_unlock(&root->mutex);
-		if(root->left != NULL) pthread_mutex_lock(&root->left->mutex);
-        root->left = insert_recur(root->left, new_node);
+    if(root->key > new_node->key)
+	{
+		if(root->left == NULL)
+		{
+			root->left = new_node;
+			pthread_mutex_unlock(&root->mutex);
+			printf("root unlocked!!! -leaf\n");
+		}
+		else
+		{
+			pthread_mutex_lock(&root->left->mutex);	
+			printf("left locked!!!\n");
+			pthread_mutex_unlock(&root->mutex);
+			printf("root unlocked!!\n");
+			insert_recur(root->left, new_node);
+		}
 	}
-    else if(root->key < new_node->key){
-		printf("right here\n");
-		pthread_mutex_unlock(&root->mutex);
-		if(root->right != NULL) pthread_mutex_lock(&root->right->mutex);
-        root->right = insert_recur(root->right, new_node);
+    else if(root->key < new_node->key)
+	{
+		if(root->right == NULL)
+		{
+			root->right = new_node;
+			pthread_mutex_unlock(&root->mutex);
+			printf("root unlocked! - leaf right\n");
+		}
+		else
+		{
+			pthread_mutex_lock(&root->right->mutex);
+			printf("right locked!!!\n");
+
+			pthread_mutex_unlock(&root->mutex);
+			printf("root unlocked!!\n");
+			insert_recur(root->right, new_node);
+		}
 	}
 	else
+	{
+		printf("unlock!!!!!!!!\n");
 		pthread_mutex_unlock(&root->mutex);
-    
-     // if key is duplicated, just return root
-    return root;
+	}
 }
 int lab2_node_insert_fg(lab2_tree *tree, lab2_node *new_node){
     // You need to implement lab2_node_insert_fg function.
-	if(tree->root != NULL)
-		pthread_mutex_lock(&tree->root->mutex);
 	
-    tree->root = insert_fg_recur(tree->root, new_node);
+	if(tree->root == NULL)
+	{
+		pthread_mutex_lock(&tree->global_lock);
+		tree->root = lab2_node_create(new_node->key);
+		pthread_mutex_unlock(&tree->global_lock);
+		return LAB2_SUCCESS;
+	}
+	else if(tree->root->left == NULL && tree->root->right == NULL) // if only root is filled
+	{
+		pthread_mutex_lock(&tree->root->mutex);
+		printf("root is locked\n");
+	}
+	insert_fg_recur(tree->root, new_node);
+
     return LAB2_SUCCESS;
 }
 
@@ -184,6 +215,7 @@ lab2_node* remove_recur(lab2_node* root, int key)
         if(root->left != NULL && root->right != NULL) // If both is not NULL
         {
              t_node = find_min_node(root->right);
+			 root->key = t_node->key;
              root->right = remove_recur(root->right, t_node->key);
         }
         else
@@ -214,8 +246,46 @@ int lab2_node_remove(lab2_tree *tree, int key) {
  *  @param int key          : key value that you want to delete. 
  *  @return                 : status (success or fail)
  */
+lab2_node* remove_fg_recur(lab2_node* root, int key)
+{
+    lab2_node* t_node;
+    if(root == NULL)
+        return NULL;
+
+	pthread_mutex_lock(&root->mutex);
+    if(root->key == key)
+    {
+        if(root->left != NULL && root->right != NULL) // If both is not NULL
+        {
+             t_node = find_min_node(root->right);
+			 pthread_mutex_unlock(&root->mutex);
+             root->right = remove_recur(root->right, t_node->key);
+        }
+        else
+        {
+             t_node = (root->left == NULL) ? root->right : root->left; // Decide returned node.
+			 pthread_mutex_unlock(&root->mutex);
+             free(root);
+             return t_node;
+        }
+    }
+    else if(root->key > key)
+	{
+		pthread_mutex_unlock(&root->mutex);
+        root->left = remove_recur(root->left, key);
+	}
+	else
+	{
+		pthread_mutex_unlock(&root->mutex);
+        root->right = remove_recur(root->right, key);
+	}
+    return root;
+}
 int lab2_node_remove_fg(lab2_tree *tree, int key) {
     // You need to implement lab2_node_remove_fg function.
+	remove_fg_recur(tree->root, key);
+   
+    return LAB2_SUCCESS;
 }
 
 
@@ -229,9 +299,11 @@ int lab2_node_remove_fg(lab2_tree *tree, int key) {
  */
 int lab2_node_remove_cg(lab2_tree *tree, int key) {
     // You need to implement lab2_node_remove_cg function.
-    pthread_mutex_lock(&tree->global_lock);
-    tree->root = remove_recur(tree->root, key);
-    pthread_mutex_unlock(&tree->global_lock);
+   pthread_mutex_lock(&tree->global_lock);
+   tree->root = remove_recur(tree->root, key);
+   pthread_mutex_unlock(&tree->global_lock);
+   
+   return LAB2_SUCCESS;
 }
 
 

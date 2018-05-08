@@ -246,7 +246,7 @@ void bst_test(int num_threads,int node_count){
     for (i=0; i < node_count; i++) { 
         node = lab2_node_create(data[i]);
         if(is_sync == LAB2_TYPE_FINEGRAINED)
-            lab2_node_insert_fg(tree,node);
+            lab2_node_insert_fg(tree, node);
         else if(is_sync == LAB2_TYPE_COARSEGRAINED)
             lab2_node_insert_cg(tree,node);
     }
