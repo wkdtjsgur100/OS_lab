@@ -43,9 +43,9 @@ void lab2_sync_example(char *cmd)
     printf("    #sudo %s -t 4 -c 10000000 \n", cmd);
 }
 
-static void print_result(lab2_tree *tree,int num_threads,int node_count ,int is_sync, int op_type ,double time){
-    char *cond[] = {"fine-grained BST  ", "coarse-grained BST", "single thread BST"};
-    char *op[] = {"insert","delete"};
+static void print_result(lab2_queue *queue,int num_threads,int node_count ,int is_sync, int op_type ,double time){
+    char *cond[] = {"fine-grained queue  ", "coarse-grained queue", "single thread queue"};
+    char *op[] = {"enqueue","delete"};
     int result_count=0;
 
 
@@ -55,8 +55,8 @@ static void print_result(lab2_tree *tree,int num_threads,int node_count ,int is_
     printf("    test threads        : %d \n",num_threads);
     printf("    execution time      : %lf seconds \n\n",time);
 
-    printf("\n BST inorder iteration result : \n");
-    result_count=lab2_node_print_inorder(tree);
+    printf("\n queue inorder iteration result : \n");
+    result_count=lab2_node_print_inorder(queue);
     printf("    total node count    : %d \n\n",result_count);
 
 
@@ -65,23 +65,23 @@ static void print_result(lab2_tree *tree,int num_threads,int node_count ,int is_
 void* thread_job_delete(void *arg){
 
     thread_arg *th_arg = (thread_arg *)arg;
-    lab2_tree *tree = th_arg->tree;
+    lab2_queue *queue = th_arg->queue;
     int is_sync = th_arg->is_sync;
     int *data_set = th_arg->data_set;
     int start = th_arg->start, end = th_arg->end;
     int i;
     for(i=start ; i < end; i++ ){
         if(is_sync == LAB2_TYPE_FINEGRAINED)
-            lab2_node_remove_fg(tree, data_set[i]);        
+            lab2_node_dequeue_fg(queue);        
         else if(is_sync == LAB2_TYPE_COARSEGRAINED)
-            lab2_node_remove_cg(tree, data_set[i]);
+            lab2_node_dequeue_cg(queue);
     }
 }
 
-void* thread_job_insert(void *arg){
+void* thread_job_enqueue(void *arg){
 
     thread_arg *th_arg = (thread_arg *)arg;
-    lab2_tree *tree = th_arg->tree;
+    lab2_queue *queue = th_arg->queue;
     int is_sync = th_arg->is_sync;
     int *data = th_arg->data_set;
     int start = th_arg->start, end = th_arg->end;
@@ -90,17 +90,17 @@ void* thread_job_insert(void *arg){
     for (i=start ; i < end ; i++) {               
         lab2_node* node = lab2_node_create(data[i]);
         if(is_sync == LAB2_TYPE_FINEGRAINED)
-            lab2_node_insert_fg(tree, node);
+            lab2_node_enqueue_fg(queue, node);
         else if(is_sync == LAB2_TYPE_COARSEGRAINED)
-            lab2_node_insert_cg(tree, node);
+            lab2_node_enqueue_cg(queue, node);
     }
 }
 
 void bst_test(int num_threads,int node_count){
 
-    lab2_tree *tree;
+    lab2_queue *queue;
     lab2_node *node;    
-    struct timeval tv_insert_start, tv_insert_end, tv_delete_start, tv_delete_end, tv_start, tv_end;
+    struct timeval tv_enqueue_start, tv_enqueue_end, tv_delete_start, tv_delete_end, tv_start, tv_end;
     int errors,i=0,count=0;
     int root_data = 40; 
     int term = node_count / num_threads, is_sync;
@@ -117,111 +117,111 @@ void bst_test(int num_threads,int node_count){
         abort();
 
     /*
-     * single thread insert test.
+     * single thread enqueue test.
      */
     gettimeofday(&tv_start, NULL);
     printf("\n");
-    tree = lab2_tree_create();
+    queue = lab2_queue_create();
     for (i=0 ; i < node_count ; i++) {               
         lab2_node* node = lab2_node_create(data[i]);
-        lab2_node_insert(tree, node);
+        lab2_node_enqueue(queue, node);
     }
 
     gettimeofday(&tv_end, NULL);
     exe_time = get_timeval(&tv_start, &tv_end);
-    print_result(tree,num_threads, node_count, LAB2_TYPE_SINGLE,LAB2_OPTYPE_INSERT ,exe_time);
-    lab2_tree_delete(tree);
+    print_result(queue,num_threads, node_count, LAB2_TYPE_SINGLE,LAB2_OPTYPE_INSERT ,exe_time);
+    lab2_queue_delete(queue);
 
     /* 
-     * multi therad insert test coarse-grained 
+     * multi therad enqueue test coarse-grained 
      */
     is_sync = LAB2_TYPE_COARSEGRAINED;
-    tree = lab2_tree_create();
+    queue = lab2_queue_create();
 
-    gettimeofday(&tv_insert_start, NULL);
+    gettimeofday(&tv_enqueue_start, NULL);
     for(i=0; i < num_threads ; i++){
         thread_arg *th_arg = &threads[i];
-        th_arg->tree = tree;
+        th_arg->queue = queue;
         th_arg->is_sync = is_sync;
         th_arg->data_set = data;
         th_arg->start = i*term;
         th_arg->end = (i+1)*term;
 
-        pthread_create(&threads[i].thread,NULL,thread_job_insert,(void*)th_arg);
+        pthread_create(&threads[i].thread,NULL,thread_job_enqueue,(void*)th_arg);
     }
 
     for (i = 0; i < num_threads; i++)
         pthread_join(threads[i].thread, NULL);
 
-    gettimeofday(&tv_insert_end, NULL);
-    exe_time = get_timeval(&tv_insert_start, &tv_insert_end);
-    print_result(tree,num_threads, node_count, is_sync,LAB2_OPTYPE_INSERT ,exe_time);
-    lab2_tree_delete(tree);
+    gettimeofday(&tv_enqueue_end, NULL);
+    exe_time = get_timeval(&tv_enqueue_start, &tv_enqueue_end);
+    print_result(queue,num_threads, node_count, is_sync,LAB2_OPTYPE_INSERT ,exe_time);
+    lab2_queue_delete(queue);
 
     /*
-     *  multi thread insert test fine-grained \
+     *  multi thread enqueue test fine-grained \
      */
     is_sync = LAB2_TYPE_FINEGRAINED;
-    tree = lab2_tree_create();
+    queue = lab2_queue_create();
 
-    gettimeofday(&tv_insert_start, NULL);
+    gettimeofday(&tv_enqueue_start, NULL);
     for(i=0; i < num_threads ; i++){
         thread_arg *th_arg = &threads[i];
-        th_arg->tree = tree;
+        th_arg->queue = queue;
         th_arg->is_sync = is_sync;
         th_arg->data_set = data;
         th_arg->start = i*term;
         th_arg->end = (i+1)*term;
 
-        pthread_create(&threads[i].thread,NULL,thread_job_insert,(void*)th_arg);
+        pthread_create(&threads[i].thread,NULL,thread_job_enqueue,(void*)th_arg);
     }
 
     for (i = 0; i < num_threads; i++)
         pthread_join(threads[i].thread, NULL);
 
-    gettimeofday(&tv_insert_end, NULL);
-    exe_time = get_timeval(&tv_insert_start, &tv_insert_end);
-    print_result(tree,num_threads, node_count, is_sync, LAB2_OPTYPE_INSERT,exe_time);
-    lab2_tree_delete(tree);
+    gettimeofday(&tv_enqueue_end, NULL);
+    exe_time = get_timeval(&tv_enqueue_start, &tv_enqueue_end);
+    print_result(queue,num_threads, node_count, is_sync, LAB2_OPTYPE_INSERT,exe_time);
+    lab2_queue_delete(queue);
     
     /* 
      * single thread delete test
      */
 
-    tree = lab2_tree_create();
+    queue = lab2_queue_create();
     for (i=0 ; i < node_count ; i++) {               
         lab2_node* node = lab2_node_create(data[i]);
-        lab2_node_insert(tree, node);
+        lab2_node_enqueue(queue, node);
     }
 
     gettimeofday(&tv_start, NULL);
     for(i=0 ; i < node_count ; i++){
-        lab2_node_remove(tree,data[i]);
+        lab2_node_dequeue(queue);
     }
 
     gettimeofday(&tv_end, NULL);
     exe_time = get_timeval(&tv_start, &tv_end);
-    print_result(tree ,num_threads, node_count, LAB2_TYPE_SINGLE, LAB2_OPTYPE_DELETE,exe_time);
-    lab2_tree_delete(tree);
+    print_result(queue ,num_threads, node_count, LAB2_TYPE_SINGLE, LAB2_OPTYPE_DELETE,exe_time);
+    lab2_queue_delete(queue);
     
     /* 
      * multi thread delete test coarse-grained  
      */
     is_sync = LAB2_TYPE_COARSEGRAINED;
-    tree = lab2_tree_create();
+    queue = lab2_queue_create();
 
     for (i=0; i < node_count; i++) { 
         node = lab2_node_create(data[i]);
         if(is_sync == LAB2_TYPE_FINEGRAINED)
-            lab2_node_insert_fg(tree,node);
+            lab2_node_enqueue_fg(queue,node);
         else if(is_sync == LAB2_TYPE_COARSEGRAINED)
-            lab2_node_insert_cg(tree,node);
+            lab2_node_enqueue_cg(queue,node);
     }            
     
     gettimeofday(&tv_delete_start, NULL);
     for(i=0 ; i < num_threads ; i++){
         thread_arg *th_arg = &threads[i];
-        th_arg->tree = tree;
+        th_arg->queue = queue;
         th_arg->is_sync = is_sync;
         th_arg->data_set = data;
         th_arg->start = i*term;
@@ -235,26 +235,26 @@ void bst_test(int num_threads,int node_count){
     gettimeofday(&tv_delete_end, NULL);
     exe_time = get_timeval(&tv_delete_start, &tv_delete_end);
 
-    print_result(tree,num_threads, node_count, is_sync,LAB2_OPTYPE_DELETE,exe_time);
-    lab2_tree_delete(tree);
+    print_result(queue,num_threads, node_count, is_sync,LAB2_OPTYPE_DELETE,exe_time);
+    lab2_queue_delete(queue);
 
     /* 
      * multi thread delete test fine-grained  
      */
     is_sync = LAB2_TYPE_FINEGRAINED;
-    tree = lab2_tree_create();
+    queue = lab2_queue_create();
     for (i=0; i < node_count; i++) { 
         node = lab2_node_create(data[i]);
         if(is_sync == LAB2_TYPE_FINEGRAINED)
-            lab2_node_insert_fg(tree, node);
+            lab2_node_enqueue_fg(queue, node);
         else if(is_sync == LAB2_TYPE_COARSEGRAINED)
-            lab2_node_insert_cg(tree,node);
+            lab2_node_enqueue_cg(queue,node);
     }
 
     gettimeofday(&tv_delete_start, NULL);
     for(i=0 ; i < num_threads ; i++){
         thread_arg *th_arg = &threads[i];
-        th_arg->tree = tree;
+        th_arg->queue = queue;
         th_arg->is_sync = is_sync;
         th_arg->data_set = data;
         th_arg->start = i*term;
@@ -269,8 +269,8 @@ void bst_test(int num_threads,int node_count){
     gettimeofday(&tv_delete_end, NULL);
     exe_time = get_timeval(&tv_delete_start, &tv_delete_end);
 
-    print_result(tree ,num_threads, node_count, is_sync, LAB2_OPTYPE_DELETE,exe_time);
-    lab2_tree_delete(tree);
+    print_result(queue ,num_threads, node_count, is_sync, LAB2_OPTYPE_DELETE,exe_time);
+    lab2_queue_delete(queue);
 
     printf("\n");
 

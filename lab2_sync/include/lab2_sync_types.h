@@ -1,8 +1,8 @@
 /*
 *	DKU Operating System Lab
 *	    Lab2 (Synchronization)
-*	    Student id : 
-*	    Student name : 
+*	    Student id : 32121671
+*	    Student name : 장선혁
 *
 *   lab1_sched.c :
 *       - Lab2 header file.
@@ -22,34 +22,32 @@
 /*
  * lab2_node
  *
- *  struct lab2_node *left  : left child link
- *  struct lab2_node *right : right child link
+ *  struct lab2_node *next  : next link
  *  int key                 : node key value 
  */
 typedef struct lab2_node {
-    pthread_mutex_t mutex;
-    struct lab2_node *left;
-    struct lab2_node *right;
+    struct lab2_node *next;
     int key;
-
 } lab2_node;
 
 /*
- * lab2_tree
+ * lab2_queue
  *
- *  struct lab2_node *root  : root node of bst.
+ *  struct lab2_node *head  : head node of queue.
  */
-typedef struct lab2_tree {
-    struct lab2_node *root;
-    pthread_mutex_t global_lock; // for coarse-grained lock
-} lab2_tree;
+typedef struct lab2_queue {
+    struct lab2_node *head;
+    struct lab2_node *tail;
+    pthread_mutex_t head_lock; 
+    pthread_mutex_t tail_lock; 
+} lab2_queue;
 
 /* 
  * lab2_bst_test.c related structure.  
  */
 typedef struct thread_arg{
     pthread_t thread;
-    lab2_tree *tree;
+    lab2_queue *queue;
     int node_count;
     int num_iterations;
     int is_sync;
@@ -65,16 +63,16 @@ typedef struct thread_arg{
  */
 
 
-int lab2_node_print_inorder(lab2_tree *tree);
-lab2_tree *lab2_tree_create();
+int lab2_node_print_inorder(lab2_queue *queue);
+lab2_queue *lab2_queue_create();
 lab2_node *lab2_node_create(int key);
-int lab2_node_insert(lab2_tree *tree, lab2_node *new_node);
-int lab2_node_insert_fg(lab2_tree *tree, lab2_node *new_node);
-int lab2_node_insert_cg(lab2_tree *tree, lab2_node *new_node);
-int lab2_node_remove(lab2_tree *tree, int key);
-int lab2_node_remove_fg(lab2_tree *tree, int key);
-int lab2_node_remove_cg(lab2_tree *tree, int key);
-void lab2_tree_delete(lab2_tree *tree);
+int lab2_node_enqueue(lab2_queue *queue, lab2_node *new_node);
+int lab2_node_enqueue_fg(lab2_queue *queue, lab2_node *new_node);
+int lab2_node_enqueue_cg(lab2_queue *queue, lab2_node *new_node);
+int lab2_node_dequeue(lab2_queue *queue);
+int lab2_node_dequeue_fg(lab2_queue *queue);
+int lab2_node_dequeue_cg(lab2_queue *queue);
+void lab2_queue_delete(lab2_queue *queue);
 void lab2_node_delete(lab2_node *node);
 
 
