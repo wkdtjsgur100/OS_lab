@@ -19,12 +19,19 @@
 
 #include "lab2_sync_types.h"
 
-int print_inorder_recur(lab2_node* node)
+int count_total_node(lab2_node* node)
 {
     if(node == NULL)
         return 0;
 
-    return print_inorder_recur(node->next)+1;
+	lab2_node* t_node = node;
+	int cnt = 0;
+	while(t_node != NULL)
+	{
+		cnt++;
+		t_node = t_node->next;
+	}
+	return cnt;
 }
 /*
  * TODO
@@ -35,7 +42,7 @@ int print_inorder_recur(lab2_node* node)
  */
 int lab2_node_print_inorder(lab2_queue *queue) {
     // You need to implement lab2_node_print_inorder function.
-    return print_inorder_recur(queue->head);
+    return count_total_node(queue->head);
 }
 
 /*
